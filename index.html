@@ -1,0 +1,143 @@
+<html>
+  <head>
+    <title>Image Transfer Test</title>
+  </head>
+  <style type="text/css">
+    #drag_n_drop { border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto;}
+    #drag_n_drop.hover { border: 10px dashed #333; }
+    #transfer_spot { list-style: none; margin: 0px; padding: 0px; }
+    #transfer_spot li { text-align: center; }
+    #transfer_spot li a { border: 10px solid #333; width: 300px; height: 300px; margin: 20px auto; display: block; }
+  </style>
+  <body>
+    <div id="drag_n_drop"></div>
+    <ul id="transfer_spot"></ul>
+    <script src="http://cdn.pubnub.com/pubnub.js"></script>
+    <script type="text/javascript">
+
+    var holder = document.getElementById('drag_n_drop');
+
+    if (typeof window.FileReader === 'undefined') {
+
+      alert('HTML5 File Reader Unavailable');
+
+    } else {
+
+      var p = PUBNUB.init({
+        'subscribe_key' : 'sub-c-569ce890-3712-11e4-8736-02ee2ddab7fe',
+        'publish_key' : 'pub-c-af1acef3-f5a1-41c3-9090-7895cd7e7d02'
+      });
+
+      var filesData = { };
+
+      var transferSpot = document.getElementById('transfer_spot');
+
+      var placeDecodedPacketOntoDom = function(packet, fileName, modified) {
+
+        var li = document.createElement('li');
+        
+        var p = document.createElement('p');
+        var fileNameTextNode = document.createTextNode('Name : ' + fileName); 
+        p.appendChild(fileNameTextNode);
+        li.appendChild(p);
+
+        p = document.createElement('p');
+        fileNameTextNode = document.createTextNode('Modified : ' + modified); 
+        p.appendChild(fileNameTextNode);
+        li.appendChild(p);
+
+        var a = document.createElement('a');
+        a.style.background = 'url(' + packet.join('') + ') no-repeat center';
+        a.href = packet.join('');
+        a.target = '_blank';
+        a.innerHTML = '&nbsp;';
+        
+        li.appendChild(a);
+        
+        transferSpot.insertBefore(li, transferSpot.firstChild);
+      };
+
+      var decodePacket = function(message) {
+        if (!filesData.hasOwnProperty(message.unique)) {
+          filesData[message.unique] = Array(message.totalPackets);
+        }
+        filesData[message.unique][message.packetNum] = message.packet;
+        if (Object.keys(filesData[message.unique]).length == message.totalPackets) {
+          placeDecodedPacketOntoDom(filesData[message.unique], message.name, message.modified);
+          filesData[message.unique] = null;
+          delete filesData[message.unique];
+        }
+      };
+
+      var sequentialPublish = function(dataUrlParts, name, modified, packetNum, length, unique) {
+        if (!length) {
+          length = dataUrlParts.length
+        }
+        if (!packetNum) {
+          packetNum = 0;
+        }
+        if (!unique) {
+          unique = PUBNUB.unique();
+        }
+        var dataUrlPart = dataUrlParts.shift();
+        p.publish({
+          'channel' : 'file_transfer_test',
+          'message' : {
+            'name'   : name,
+            'unique' : unique,
+            'event'  : 'packet',
+            'totalPackets'  : length,
+            'packetNum'  : packetNum++,
+            'packet' : dataUrlPart,
+            'modified': modified
+          }
+        });
+        if (dataUrlParts.length) {
+          sequentialPublish(dataUrlParts, name, modified, packetNum, length, unique);
+        }
+      };
+
+      var splitFileEventDataIntoParts = function (event, file) {
+        var dataUrlLength = event.target.result.length;
+        var dataUrlParts = [];
+        var maxPartLength = 25000;
+        var rounds = Math.ceil(dataUrlLength / maxPartLength);
+        var start = 0;
+        for (var idx = 1; idx <= rounds; idx++) {
+          var end = idx * maxPartLength;
+          dataUrlParts.push(event.target.result.slice(start, end))
+          start = end;
+        }
+        holder.style.background = 'url(' + dataUrlParts.join('') + ') no-repeat center';
+        sequentialPublish(dataUrlParts, file.name, file.lastModifiedDate);
+      };
+
+      holder.ondragover = function () { this.className = 'hover'; return false; };
+      holder.ondragend = function () { this.className = ''; return false; };
+      holder.ondrop = function (e) {
+        this.className = '';
+        e.preventDefault();
+
+        var file = e.dataTransfer.files[0],
+            reader = new FileReader();
+        reader.onload = function(event) {
+          splitFileEventDataIntoParts(event, file);
+        };
+        reader.readAsDataURL(file);
+
+        return false;
+      };
+
+      p.subscribe({
+        'channel' : 'file_transfer_test',
+        'message' : function(m) {
+          if (m.event === 'packet') {
+            decodePacket(m);
+          }
+        }
+      });
+
+    }
+    </script>
+  </body>
+</html>
