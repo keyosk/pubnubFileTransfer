@@ -7,8 +7,8 @@
     #sending { position: absolute; top: 0px; left: 0px; background-color: black; opacity: 0.5; width: 300px; height: 180px; margin: 20px auto; border: 10px dashed transparent; text-align: center; font-size: 36px; color: white; padding-top: 120px; display: none; z-index: 2; }
     #holder { position: absolute; top: 0px; left: 0px; border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto; z-index: 1;}
     #holder.hover { border: 10px dashed #333; }
-    #transfer_spot { list-style: none; margin: 0px; padding: 0px; }
-    #transfer_spot li { text-align: center; border-top: 10px solid black; }
+    ul { list-style: none; margin: 0px; padding: 0px; }
+    ul li { text-align: center; border-top: 10px solid black; }
     #transfer_spot li a { border: 10px solid #333; width: 300px; height: 300px; margin: 20px auto; display: block; }
   </style>
   <body>
@@ -21,11 +21,12 @@
       <div id="sending">Sending...</div>
       <div id="holder">&nbsp;</div>
     </div>
+    <ul id="transfer_status"></ul>
     <ul id="transfer_spot"></ul>
     <script src="http://cdn.pubnub.com/pubnub.js"></script>
     <script type="text/javascript">
 
-    var signalChannel = 'file_transfer_testv1.3.3';
+    var signalChannel = 'file_transfer_testv1.3.5';
 
     var maxPacketLength = 25000;
 
@@ -90,10 +91,27 @@
           filesData[message.unique] = Array(message.totalPackets);
         }
         filesData[message.unique][message.packetNum] = message.packet;
+        var partsObtained = Object.keys(filesData[message.unique]).length;
+
+        // Setup status
+
+        var statusEle = document.getElementById('transfer_status_' + message.unique);
+
+        if (!statusEle) {
+          statusEle = document.createElement('li');
+          statusEle.id = 'transfer_status_' + message.unique;
+          document.getElementById('transfer_status').appendChild(statusEle);
+        }
+
+        statusEle.innerHTML = '[' + partsObtained + '/' + message.totalPackets + '] ' + message.name;
+
+        // End status
+        
         if (Object.keys(filesData[message.unique]).length == message.totalPackets) {
           placeDecodedPacketOntoDom(filesData[message.unique], message.name, message.modified, message.type);
           filesData[message.unique] = null;
           delete filesData[message.unique];
+          document.getElementById('transfer_status').removeChild(statusEle);
         }
       };
 
