@@ -3,19 +3,31 @@
     <title>Image Transfer Test</title>
   </head>
   <style type="text/css">
-    #drag_n_drop { border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto;}
-    #drag_n_drop.hover { border: 10px dashed #333; }
+    #drag_area { position: relative; width: 340px; height: 340px; margin: 20px auto; }
+    #sending { position: absolute; top: 0px; left: 0px; background-color: black; opacity: 0.5; width: 300px; height: 180px; margin: 20px auto; border: 10px dashed transparent; text-align: center; font-size: 36px; color: white; padding-top: 120px; display: none; z-index: 2; }
+    #holder { position: absolute; top: 0px; left: 0px; border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto; z-index: 1;}
+    #holder.hover { border: 10px dashed #333; }
     #transfer_spot { list-style: none; margin: 0px; padding: 0px; }
-    #transfer_spot li { text-align: center; }
+    #transfer_spot li { text-align: center; border-top: 10px solid black; }
     #transfer_spot li a { border: 10px solid #333; width: 300px; height: 300px; margin: 20px auto; display: block; }
   </style>
   <body>
-    <div id="drag_n_drop"></div>
+    <a id="get_all_files" href="javascript:getAllFiles()">Get Full History</a>
+    <div id="drag_area">
+      <div id="sending">Sending...</div>
+      <div id="holder">&nbsp;</div>
+    </div>
     <ul id="transfer_spot"></ul>
     <script src="http://cdn.pubnub.com/pubnub.js"></script>
     <script type="text/javascript">
 
-    var holder = document.getElementById('drag_n_drop');
+    var signalChannel = 'file_transfer_testv1.3.1';
+
+    var maxPacketLength = 25000;
+
+    var holder = document.getElementById('holder');
+
+    var sending = document.getElementById('sending');
 
     if (typeof window.FileReader === 'undefined') {
 
@@ -32,7 +44,9 @@
 
       var transferSpot = document.getElementById('transfer_spot');
 
-      var placeDecodedPacketOntoDom = function(packet, fileName, modified) {
+      var placeDecodedPacketOntoDom = function(packet, fileName, modified, type) {
+
+        var content = packet.join('');
 
         var li = document.createElement('li');
         
@@ -46,15 +60,25 @@
         p.appendChild(fileNameTextNode);
         li.appendChild(p);
 
+        p = document.createElement('p');
+        fileNameTextNode = document.createTextNode('Type : ' + type); 
+        p.appendChild(fileNameTextNode);
+        li.appendChild(p);
+
         var a = document.createElement('a');
-        a.style.background = 'url(' + packet.join('') + ') no-repeat center';
-        a.href = packet.join('');
+        if (type.indexOf('image') !== -1) {
+          a.style.background = 'url(' + content + ') no-repeat center';
+        }
+        a.title = 'Click to open : ' + fileName;
+        a.href = content;
         a.target = '_blank';
         a.innerHTML = '&nbsp;';
         
         li.appendChild(a);
         
         transferSpot.insertBefore(li, transferSpot.firstChild);
+
+        content = null;
       };
 
       var decodePacket = function(message) {
@@ -63,53 +87,74 @@
         }
         filesData[message.unique][message.packetNum] = message.packet;
         if (Object.keys(filesData[message.unique]).length == message.totalPackets) {
-          placeDecodedPacketOntoDom(filesData[message.unique], message.name, message.modified);
+          placeDecodedPacketOntoDom(filesData[message.unique], message.name, message.modified, message.type);
           filesData[message.unique] = null;
           delete filesData[message.unique];
         }
       };
 
-      var sequentialPublish = function(dataUrlParts, name, modified, packetNum, length, unique) {
-        if (!length) {
-          length = dataUrlParts.length
+      var splitFileEventDataIntoParts = function (event, file) {
+        sending.style.display = 'block';
+        if (file.type.indexOf('image') !== -1) {
+          holder.style.background = 'url(' + event.target.result + ') no-repeat center';
         }
-        if (!packetNum) {
-          packetNum = 0;
-        }
-        if (!unique) {
-          unique = PUBNUB.unique();
-        }
-        var dataUrlPart = dataUrlParts.shift();
-        p.publish({
-          'channel' : 'file_transfer_test',
-          'message' : {
-            'name'   : name,
-            'unique' : unique,
-            'event'  : 'packet',
-            'totalPackets'  : length,
-            'packetNum'  : packetNum++,
-            'packet' : dataUrlPart,
-            'modified': modified
+        var dataUrlLength = event.target.result.length;
+        var rounds = Math.ceil(dataUrlLength / maxPacketLength);
+        var start = 0;
+        var unique = (new Date()).getTime() + '' + PUBNUB.unique();
+        for (var idx = 0; idx < rounds; idx++) {
+          var end = (idx + 1) * maxPacketLength;
+          p.publish({
+            'channel' : signalChannel,
+            'message' : {
+              'name'          : file.name,
+              'unique'        : unique,
+              'event'         : 'packet',
+              'totalPackets'  : rounds,
+              'packetNum'     : idx,
+              'packet'        : event.target.result.slice(start, end),
+              'modified'      : file.lastModifiedDate,
+              'type'          : file.type
+            }
+          });
+          if (idx === (rounds - 1)) {
+            sending.style.display = 'none';
           }
-        });
-        if (dataUrlParts.length) {
-          sequentialPublish(dataUrlParts, name, modified, packetNum, length, unique);
+          start = end;
         }
       };
 
-      var splitFileEventDataIntoParts = function (event, file) {
-        var dataUrlLength = event.target.result.length;
-        var dataUrlParts = [];
-        var maxPartLength = 25000;
-        var rounds = Math.ceil(dataUrlLength / maxPartLength);
-        var start = 0;
-        for (var idx = 1; idx <= rounds; idx++) {
-          var end = idx * maxPartLength;
-          dataUrlParts.push(event.target.result.slice(start, end))
-          start = end;
-        }
-        holder.style.background = 'url(' + dataUrlParts.join('') + ') no-repeat center';
-        sequentialPublish(dataUrlParts, file.name, file.lastModifiedDate);
+      var getFullHistory = function(args) {
+        var chan     = args['channel'] || signalChannel
+        ,   callback = args['callback']   || function(){}
+        ,   error    = args['error']  || function(){}
+        ,   limit    = +args['limit'] || 5000
+        ,   start    = 0
+        ,   count    = 100
+        ,   history  = []
+        ,   params   = {
+                channel  : chan,
+                count    : count,
+                callback : function(messages) {
+                    var msgs = messages[0];
+                    start = messages[1];
+                    params.start = start;
+                    PUBNUB.each( msgs.reverse(), function(m) {history.push(m)} );
+
+                    if (history.length >= limit) return callback(history);
+                    if (msgs.length < count)     return callback(history);
+
+                    count = 100;
+                    add_messages();
+                },
+                error : function(e) {
+                    callback(history);
+                    error(history);
+                }
+            };
+
+        add_messages();
+        function add_messages() { p.history(params) }
       };
 
       holder.ondragover = function () { this.className = 'hover'; return false; };
@@ -129,13 +174,31 @@
       };
 
       p.subscribe({
-        'channel' : 'file_transfer_test',
+        'channel' : signalChannel,
         'message' : function(m) {
           if (m.event === 'packet') {
             decodePacket(m);
           }
         }
       });
+
+      var getAllFiles = function() {
+
+        getFullHistory({
+          'channel' : signalChannel,
+          'callback' : function(m) {
+            m.reverse()
+            for (var idx in m) {
+              decodePacket(m[idx]);
+            }
+          }
+        });
+
+        document.getElementById('get_all_files').style.display = 'none';
+
+        getAllFiles = function() { };
+
+      };
 
     }
     </script>
