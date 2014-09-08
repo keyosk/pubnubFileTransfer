@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Image Transfer Test</title>
+    <title>PubNub File Transfer</title>
   </head>
   <style type="text/css">
     #drag_area { position: relative; width: 340px; height: 340px; margin: 20px auto; }
@@ -12,6 +12,10 @@
     #transfer_spot li a { border: 10px solid #333; width: 300px; height: 300px; margin: 20px auto; display: block; }
   </style>
   <body>
+    <h1>PubNub File Transfer</h1>
+    <p>Drag a file into the box below, it will be transferred to any and all browsers viewing this page.</p>
+    <p>You may click the thumbnail associated with each transferred file to open the file in a new tab. Alternatively you may right click and save the file to your computer.</p>
+    <p><small>Due to browser memory limitations, sending a file over 1MB will potentially cause a browser crash, please limit your tests to files &lt; 1MB</small></p>
     <a id="get_all_files" href="javascript:getAllFiles()">Get Full History</a>
     <div id="drag_area">
       <div id="sending">Sending...</div>
