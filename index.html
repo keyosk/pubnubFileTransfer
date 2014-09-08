@@ -21,7 +21,7 @@
     <script src="http://cdn.pubnub.com/pubnub.js"></script>
     <script type="text/javascript">
 
-    var signalChannel = 'file_transfer_testv1.3.1';
+    var signalChannel = 'file_transfer_testv1.3.3';
 
     var maxPacketLength = 25000;
 
@@ -94,11 +94,15 @@
       };
 
       var splitFileEventDataIntoParts = function (event, file) {
+        var dataUrlLength = event.target.result.length;
+        if (dataUrlLength > 1000000) {
+          alert ('File is over a megabyte, your browser will be unhappy with this file... ' + Math.round((dataUrlLength / 1024) / 1024) + 'MB');
+          return;
+        }
         sending.style.display = 'block';
         if (file.type.indexOf('image') !== -1) {
           holder.style.background = 'url(' + event.target.result + ') no-repeat center';
         }
-        var dataUrlLength = event.target.result.length;
         var rounds = Math.ceil(dataUrlLength / maxPacketLength);
         var start = 0;
         var unique = (new Date()).getTime() + '' + PUBNUB.unique();
