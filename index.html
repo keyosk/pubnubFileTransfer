@@ -12,6 +12,7 @@
     #transfer_spot li a { border: 10px solid #333; width: 300px; height: 300px; margin: 20px auto; display: block; }
   </style>
   <body>
+    <a id="get_all_files" href="javascript:getAllFiles()">Get Full History</a>
     <div id="drag_area">
       <div id="sending">Sending...</div>
       <div id="holder">&nbsp;</div>
@@ -20,7 +21,7 @@
     <script src="http://cdn.pubnub.com/pubnub.js"></script>
     <script type="text/javascript">
 
-    var signalChannel = 'file_transfer_testv1.1';
+    var signalChannel = 'file_transfer_testv1.3';
 
     var maxPacketLength = 25000;
 
@@ -123,6 +124,39 @@
         }
       };
 
+      var getFullHistory = function(args) {
+        var chan     = args['channel'] || signalChannel
+        ,   callback = args['callback']   || function(){}
+        ,   error    = args['error']  || function(){}
+        ,   limit    = +args['limit'] || 5000
+        ,   start    = 0
+        ,   count    = 100
+        ,   history  = []
+        ,   params   = {
+                channel  : chan,
+                count    : count,
+                callback : function(messages) {
+                    var msgs = messages[0];
+                    start = messages[1];
+                    params.start = start;
+                    PUBNUB.each( msgs.reverse(), function(m) {history.push(m)} );
+
+                    if (history.length >= limit) return callback(history);
+                    if (msgs.length < count)     return callback(history);
+
+                    count = 100;
+                    add_messages();
+                },
+                error : function(e) {
+                    callback(history);
+                    error(history);
+                }
+            };
+
+        add_messages();
+        function add_messages() { p.history(params) }
+      };
+
       holder.ondragover = function () { this.className = 'hover'; return false; };
       holder.ondragend = function () { this.className = ''; return false; };
       holder.ondrop = function (e) {
@@ -147,6 +181,23 @@
           }
         }
       });
+
+      var getAllFiles = function() {
+
+        getFullHistory({
+          'channel' : signalChannel,
+          'callback' : function(m) {
+            for (var idx in m) {
+              decodePacket(m[idx]);
+            }
+          }
+        });
+
+        document.getElementById('get_all_files').style.display = 'none';
+
+        getAllFiles = function() { };
+
+      };
 
     }
     </script>
