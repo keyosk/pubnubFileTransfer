@@ -21,7 +21,7 @@
     <script src="http://cdn.pubnub.com/pubnub.js"></script>
     <script type="text/javascript">
 
-    var signalChannel = 'file_transfer_testv1.3';
+    var signalChannel = 'file_transfer_testv1.3.1';
 
     var maxPacketLength = 25000;
 
@@ -101,7 +101,7 @@
         var dataUrlLength = event.target.result.length;
         var rounds = Math.ceil(dataUrlLength / maxPacketLength);
         var start = 0;
-        var unique = PUBNUB.unique();
+        var unique = (new Date()).getTime() + '' + PUBNUB.unique();
         for (var idx = 0; idx < rounds; idx++) {
           var end = (idx + 1) * maxPacketLength;
           p.publish({
@@ -187,6 +187,7 @@
         getFullHistory({
           'channel' : signalChannel,
           'callback' : function(m) {
+            m.reverse()
             for (var idx in m) {
               decodePacket(m[idx]);
             }
