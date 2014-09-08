@@ -122,9 +122,6 @@
           return;
         }
         sending.style.display = 'block';
-        if (file.type.indexOf('image') !== -1) {
-          holder.style.background = 'url(' + event.target.result + ') no-repeat center';
-        }
         var rounds = Math.ceil(dataUrlLength / maxPacketLength);
         var start = 0;
         var unique = (new Date()).getTime() + '' + PUBNUB.unique();
