@@ -5,8 +5,8 @@
   <style type="text/css">
     #drag_area { position: relative; width: 340px; height: 340px; margin: 20px auto; }
     #sending { position: absolute; top: 0px; left: 0px; background-color: black; opacity: 0.5; width: 300px; height: 180px; margin: 20px auto; border: 10px dashed transparent; text-align: center; font-size: 36px; color: white; padding-top: 120px; display: none; z-index: 2; }
-    #drag_n_drop { position: absolute; top: 0px; left: 0px; border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto; z-index: 1;}
-    #drag_n_drop.hover { border: 10px dashed #333; }
+    #holder { position: absolute; top: 0px; left: 0px; border: 10px dashed #ccc; width: 300px; height: 300px; margin: 20px auto; z-index: 1;}
+    #holder.hover { border: 10px dashed #333; }
     #transfer_spot { list-style: none; margin: 0px; padding: 0px; }
     #transfer_spot li { text-align: center; border-top: 10px solid black; }
     #transfer_spot li a { border: 10px solid #333; width: 300px; height: 300px; margin: 20px auto; display: block; }
@@ -14,17 +14,17 @@
   <body>
     <div id="drag_area">
       <div id="sending">Sending...</div>
-      <div id="drag_n_drop"></div>
+      <div id="holder">&nbsp;</div>
     </div>
     <ul id="transfer_spot"></ul>
     <script src="http://cdn.pubnub.com/pubnub.js"></script>
     <script type="text/javascript">
 
-    var signalChannel = 'file_transfer_testv1';
+    var signalChannel = 'file_transfer_testv1.1';
 
     var maxPacketLength = 25000;
 
-    var holder = document.getElementById('drag_n_drop');
+    var holder = document.getElementById('holder');
 
     var sending = document.getElementById('sending');
 
@@ -94,13 +94,15 @@
 
       var splitFileEventDataIntoParts = function (event, file) {
         sending.style.display = 'block';
-        holder.style.background = 'url(' + event.target.result + ') no-repeat center';
+        if (file.type.indexOf('image') !== -1) {
+          holder.style.background = 'url(' + event.target.result + ') no-repeat center';
+        }
         var dataUrlLength = event.target.result.length;
         var rounds = Math.ceil(dataUrlLength / maxPacketLength);
         var start = 0;
         var unique = PUBNUB.unique();
         for (var idx = 0; idx < rounds; idx++) {
-          var end = (idx ? idx : 1) * maxPacketLength;
+          var end = (idx + 1) * maxPacketLength;
           p.publish({
             'channel' : signalChannel,
             'message' : {
