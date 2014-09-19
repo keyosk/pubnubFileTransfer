@@ -87,6 +87,11 @@
         li.appendChild(p);
 
         p = document.createElement('p');
+        fileNameTextNode = document.createTextNode('Size : ' + ((content.length / 1000) / 1000).toFixed(4) + ' MB'); 
+        p.appendChild(fileNameTextNode);
+        li.appendChild(p);
+
+        p = document.createElement('p');
         fileNameTextNode = document.createTextNode('Modified : ' + modified); 
         p.appendChild(fileNameTextNode);
         li.appendChild(p);
@@ -105,6 +110,7 @@
         a.href = url;
         a.target = '_blank';
         a.innerHTML = '&nbsp;';
+        a.download = fileName;
         
         li.appendChild(a);
         
@@ -145,7 +151,7 @@
       var splitFileEventDataIntoParts = function (event, file) {
         var dataUrlLength = event.target.result.length;
         if (dataUrlLength > 2000000) {
-          alert ('File is over 2 megabytes, your browser will be unhappy with this file... ' + Math.round((dataUrlLength / 1024) / 1024) + 'MB');
+          alert ('File is over 2 megabytes, your browser will be unhappy with this file... ' + Math.round((dataUrlLength / 1000) / 1000) + 'MB');
           return;
         }
         sending.style.display = 'block';
