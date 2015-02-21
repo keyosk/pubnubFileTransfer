@@ -26,15 +26,19 @@
     <script src="http://cdn.pubnub.com/pubnub.js"></script>
     <script type="text/javascript">
 
-    Array.prototype.randomElement = function () {
-      return this[Math.floor(Math.random() * this.length)]
+    var randomElement = function (list) {
+      return list[Math.floor(Math.random() * list.length)]
     };
     
-    var numberChannels = 10
+    var numberChannels = 20;
+
+    var numberInstances = Math.ceil(numberChannels / 4);
 
     var channelPrefix = 'pubnubFileTransferV1.0-'
 
     var signalChannel = [];
+
+    var pubnubs = [];
 
     for (var i = 0; i < numberChannels; i++) { signalChannel.push(channelPrefix+i) }
 
@@ -50,10 +54,12 @@
 
     } else {
 
-      var p = PUBNUB.init({
-        'subscribe_key' : 'sub-c-374a0d66-3f63-11e4-8637-02ee2ddab7fe',
-        'publish_key' : 'pub-c-8dbb9b60-466c-43dd-b4dd-f7b5692f3fc2'
-      });
+      for (var i = 0; i < numberInstances; i++) {
+        pubnubs.push(PUBNUB.init({
+          'subscribe_key' : 'sub-c-374a0d66-3f63-11e4-8637-02ee2ddab7fe',
+          'publish_key' : 'pub-c-8dbb9b60-466c-43dd-b4dd-f7b5692f3fc2'
+        }));
+      }
 
       var filesData = { };
 
@@ -170,8 +176,8 @@
         var unique = (new Date()).getTime() + '' + PUBNUB.unique();
         for (var idx = 0; idx < rounds; idx++) {
           var end = (idx + 1) * maxPacketLength;
-          p.publish({
-            'channel' : signalChannel.randomElement(),
+          randomElement(pubnubs).publish({
+            'channel' : randomElement(signalChannel),
             'message' : {
               'name'          : file.name,
               'unique'        : unique,
@@ -239,14 +245,26 @@
         return false;
       };
 
-      p.subscribe({
-        'channel' : signalChannel,
-        'message' : function(m) {
-          if (m.event === 'packet') {
-            decodePacket(m);
+      var start = 0;
+
+      for (var idx in pubnubs) {
+
+        end = (start + numberInstances) - 1;
+
+        var channels = signalChannel.slice(start, end);
+
+        pubnubs[idx].subscribe({
+          'channel' : channels,
+          'message' : function(m) {
+            if (m.event === 'packet') {
+              decodePacket(m);
+            }
           }
-        }
-      });
+        });
+
+        start = end;
+
+      }
 
       // var getAllFiles = function() {
 
