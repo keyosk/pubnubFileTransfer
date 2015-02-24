@@ -43,6 +43,8 @@ pub_key = 'pub-c-8dbb9b60-466c-43dd-b4dd-f7b5692f3fc2'
 
 sub_key = 'sub-c-374a0d66-3f63-11e4-8637-02ee2ddab7fe'
 
+rounds_complete = 0
+
 #################################################################################
 
 encoded_file = 'data:image/png;base64,' + base64.encodestring(open(file_path,'rb').read()).replace('\n', '')
@@ -86,31 +88,38 @@ class Reserver(gevent.Greenlet):
         self._exit_signal = exit_signal
 
     def _run(self):
+
+        global rounds_complete
+
         while not self._exit_signal.is_set():
 
           len_encoded_file_list = len(encoded_file_list)
 
-          if len_encoded_file_list == 0:
+          if rounds_complete == 500:
             stop()
-            break
 
-          data = encoded_file_list.pop()
+          if len_encoded_file_list != 0:
 
-          index = len_encoded_file_list
+            data = encoded_file_list.pop()
 
-          data = {
-            'name' : encoded_file_name,
-            'unique' : encoded_file_unique,
-            'event' : 'packet',
-            'totalPackets' : total_packets,
-            'packetNum' : index,
-            'packet' : data,
-            'modified' : encoded_file_modified,
-            'type' : encoded_file_mime
-          }
-          channel = random.choice(channels)
-          result = pubnub_publish(channel=channel,data=data,pub_key=pub_key,sub_key=sub_key)
-          print "publish packet %s of %s to %s : %s" % (index, total_packets, channel, result)
+            index = len_encoded_file_list
+
+            data = {
+              'name' : encoded_file_name,
+              'unique' : encoded_file_unique,
+              'event' : 'packet',
+              'totalPackets' : total_packets,
+              'packetNum' : index,
+              'packet' : data,
+              'modified' : encoded_file_modified,
+              'type' : encoded_file_mime
+            }
+            channel = random.choice(channels)
+            result = pubnub_publish(channel=channel,data=data,pub_key=pub_key,sub_key=sub_key)
+            print "publish packet %s of %s to %s : %s" % (index, total_packets, channel, result)
+          else:
+            rounds_complete = rounds_complete + 1
+
           gevent.sleep(sleep_time)
 
 gevent.signal(signal.SIGINT, stop)
