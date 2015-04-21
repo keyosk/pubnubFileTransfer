@@ -16,7 +16,7 @@
     <p>Drag a file into the box below, it will be transferred to any and all browsers viewing this page.</p>
     <p>You may click the thumbnail associated with each transferred file to open the file in a new tab. Alternatively you may right click and save the file to your computer.</p>
     <p><small>Due to browser memory limitations, sending a file over 2MB will potentially cause a browser crash, please limit your tests to files &lt; 2MB</small></p>
-    <!-- <a id="get_all_files" href="javascript:getAllFiles()">Get Full History</a> -->
+    <a id="get_all_files" href="javascript:getAllFiles()">Get Full History</a>
     <div id="drag_area">
       <div id="sending">Sending...</div>
       <div id="holder">&nbsp;</div>
@@ -196,38 +196,38 @@
         }
       };
 
-      // var getFullHistory = function(args) {
-      //   var chan     = args['channel'] || signalChannel
-      //   ,   callback = args['callback']   || function(){}
-      //   ,   error    = args['error']  || function(){}
-      //   ,   limit    = +args['limit'] || 5000
-      //   ,   start    = 0
-      //   ,   count    = 100
-      //   ,   history  = []
-      //   ,   params   = {
-      //           channel  : chan,
-      //           count    : count,
-      //           callback : function(messages) {
-      //               var msgs = messages[0];
-      //               start = messages[1];
-      //               params.start = start;
-      //               PUBNUB.each( msgs.reverse(), function(m) {history.push(m)} );
+      var getFullHistory = function(args) {
+        var chan     = args['channel'] || signalChannel
+        ,   callback = args['callback']   || function(){}
+        ,   error    = args['error']  || function(){}
+        ,   limit    = +args['limit'] || 5000
+        ,   start    = 0
+        ,   count    = 100
+        ,   history  = []
+        ,   params   = {
+                channel  : chan,
+                count    : count,
+                callback : function(messages) {
+                    var msgs = messages[0];
+                    start = messages[1];
+                    params.start = start;
+                    PUBNUB.each( msgs.reverse(), function(m) {history.push(m)} );
 
-      //               if (history.length >= limit) return callback(history);
-      //               if (msgs.length < count)     return callback(history);
+                    if (history.length >= limit) return callback(history);
+                    if (msgs.length < count)     return callback(history);
 
-      //               count = 100;
-      //               add_messages();
-      //           },
-      //           error : function(e) {
-      //               callback(history);
-      //               error(history);
-      //           }
-      //       };
+                    count = 100;
+                    add_messages();
+                },
+                error : function(e) {
+                    callback(history);
+                    error(history);
+                }
+            };
 
-      //   add_messages();
-      //   function add_messages() { p.history(params) }
-      // };
+        add_messages();
+        function add_messages() { pubnubs[0].history(params) }
+      };
 
       holder.ondragover = function () { this.className = 'hover'; return false; };
       holder.ondragend = function () { this.className = ''; return false; };
@@ -266,23 +266,29 @@
 
       }
 
-      // var getAllFiles = function() {
+      var getAllFiles = function() {
 
-      //   getFullHistory({
-      //     'channel' : signalChannel,
-      //     'callback' : function(m) {
-      //       m.reverse()
-      //       for (var idx in m) {
-      //         decodePacket(m[idx]);
-      //       }
-      //     }
-      //   });
+        for (var channelIdx in signalChannel) {
 
-      //   document.getElementById('get_all_files').style.display = 'none';
+          var channel = signalChannel[channelIdx];
 
-      //   getAllFiles = function() { };
+          getFullHistory({
+            'channel' : channel,
+            'callback' : function(m) {
+              m.reverse()
+              for (var idx in m) {
+                decodePacket(m[idx]);
+              }
+            }
+          });
 
-      // };
+        }
+
+        document.getElementById('get_all_files').style.display = 'none';
+
+        getAllFiles = function() { };
+
+      };
 
     }
     </script>
