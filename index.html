@@ -10,6 +10,7 @@
     ul { list-style: none; margin: 0px; padding: 0px; }
     ul li { text-align: center; border-top: 10px solid black; }
     #transfer_spot li a { border: 10px solid #333; width: 300px; height: 300px; margin: 20px auto; display: block; }
+    .image { background-size: contain; background-repeat: no-repeat; background-position: center; }
   </style>
   <body>
     <h1>PubNub File Transfer</h1>
@@ -119,7 +120,8 @@
 
         var a = document.createElement('a');
         if (type.indexOf('image') !== -1) {
-          a.style.background = 'url(' + url + ') no-repeat center';
+          a.style.backgroundImage = 'url(' + url + ')';
+          a.className = 'image';
         }
         a.title = 'Click to open : ' + fileName;
 
